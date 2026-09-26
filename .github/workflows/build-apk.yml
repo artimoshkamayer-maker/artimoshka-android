@@ -30,6 +30,21 @@ jobs:
           unzip -q /tmp/gradle.zip -d /tmp
           echo "/tmp/gradle-8.7/bin" >> "$GITHUB_PATH"
 
+      - name: Restore signing key
+        id: keycache
+        uses: actions/cache@v4
+        with:
+          path: debug.keystore
+          key: artimoshka-debug-keystore-v1
+
+      - name: Create signing key if missing
+        run: |
+          if [ ! -f debug.keystore ]; then
+            keytool -genkeypair -keystore debug.keystore -alias androiddebugkey \
+              -storepass android -keypass android -keyalg RSA -keysize 2048 -validity 10950 \
+              -dname "CN=Android Debug, O=Android, C=US"
+          fi
+
       - name: Download LaMa model + ONNX engine into assets
         run: |
           mkdir -p app/src/main/assets/model app/src/main/assets/ort
