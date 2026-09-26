@@ -18,6 +18,7 @@ import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -68,9 +69,38 @@ public class MainActivity extends Activity {
     s.setMediaPlaybackRequiresUserGesture(false);
     s.setAllowFileAccess(true);
     s.setCacheMode(WebSettings.LOAD_DEFAULT);
+    s.setUserAgentString(s.getUserAgentString() + " ArtimoshkaApp/1.1");
 
     webView.addJavascriptInterface(new NativeBridge(), "ArtimoshkaNative");
     webView.setWebViewClient(new WebViewClient() {
+      // Локальные файлы для стирания объекта: модель LaMa и движок onnxruntime
+      // лежат в assets APK (app/src/main/assets/{model,ort}), страница просит их
+      // по адресам https://appassets.androidplatform.net/... — отдаём из APK,
+      // интернет для стирания не нужен. Нет файла — возвращаем null, и страница
+      // сама откатится на скачивание из сети.
+      @Override
+      public WebResourceResponse shouldInterceptRequest(WebView view,
+                                                        WebResourceRequest request) {
+        String url = request.getUrl().toString();
+        String prefix = "https://appassets.androidplatform.net/";
+        if (url.startsWith(prefix)) {
+          String assetPath = url.substring(prefix.length()).split("[?#]")[0];
+          try {
+            String mime = "application/octet-stream";
+            if (assetPath.endsWith(".mjs") || assetPath.endsWith(".js")) {
+              mime = "text/javascript";
+            } else if (assetPath.endsWith(".wasm")) {
+              mime = "application/wasm";
+            }
+            return new WebResourceResponse(mime, null,
+                MainActivity.this.getAssets().open(assetPath));
+          } catch (Exception e) {
+            return null;
+          }
+        }
+        return null;
+      }
+
       @Override
       public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
         String url = request.getUrl().toString();
