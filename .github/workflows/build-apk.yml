@@ -30,6 +30,16 @@ jobs:
           unzip -q /tmp/gradle.zip -d /tmp
           echo "/tmp/gradle-8.7/bin" >> "$GITHUB_PATH"
 
+      - name: Download LaMa model + ONNX engine into assets
+        run: |
+          mkdir -p app/src/main/assets/model app/src/main/assets/ort
+          curl -sL https://huggingface.co/g-ronimo/lama/resolve/main/lama_512_int8.onnx -o app/src/main/assets/model/lama_512_int8.onnx
+          ORT=https://cdn.jsdelivr.net/npm/onnxruntime-web@1.30.0/dist
+          curl -sL $ORT/ort.webgpu.min.mjs -o app/src/main/assets/ort/ort.webgpu.min.mjs
+          curl -sL $ORT/ort-wasm-simd-threaded.asyncify.mjs -o app/src/main/assets/ort/ort-wasm-simd-threaded.asyncify.mjs
+          curl -sL $ORT/ort-wasm-simd-threaded.asyncify.wasm -o app/src/main/assets/ort/ort-wasm-simd-threaded.asyncify.wasm
+          ls -la app/src/main/assets/model app/src/main/assets/ort
+
       - name: Assemble debug APK
         run: gradle :app:assembleDebug --no-daemon
 
